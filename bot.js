@@ -1,14 +1,15 @@
+require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 
 // ========= SOZLAMALAR (SETTINGS) =========
 // GROQ API KALITINGIZ:
-const GROQ_API_KEY = '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'; 
+const GROQ_API_KEY = process.env.GROQ_API_KEY; 
 
 // Telegram Bot Tokeni
-const TELEGRAM_TOKEN = '8795979619:AAENzdh0XFyN78YpU7JhO3Ya1ounnj9QLuc';
+const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 
 // Kanal ID si
-const CHANNEL_ID = '@EnglishGrammarChannell';
+const CHANNEL_ID = process.env.CHANNEL_ID || '@EnglishGrammarChannell';
 
 // Vaqt oralig'i (10 daqiqa = 600,000 millisoniya)
 const INTERVAL_MS = 10 * 60 * 1000; 
@@ -119,4 +120,3 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, () => {
   console.log(`Web server ${PORT}-portda ishga tushdi va pings qabul qilishga tayyor.`);
 });
-
