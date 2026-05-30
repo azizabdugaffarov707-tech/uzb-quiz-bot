@@ -1,4 +1,3 @@
-const TelegramBot = require('node-telegram-bot-api');  // ========= SOZLAMALAR (SETTINGS) =========;
 const TelegramBot = require('node-telegram-bot-api');
 
 // ========= SOZLAMALAR (SETTINGS) =========
