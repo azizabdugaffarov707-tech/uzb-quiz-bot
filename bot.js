@@ -1,26 +1,41 @@
 const TelegramBot = require('node-telegram-bot-api');
 
 // ========= SOZLAMALAR (SETTINGS) =========
-// GROQ API KALITINGIZ:
 const GROQ_API_KEY = process.env.GROQ_API_KEY; 
-
-// Telegram Bot Tokeni
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
-
-// Kanal ID si
 const CHANNEL_ID = process.env.CHANNEL_ID || '@EnglishGrammarChannell';
-
-// Vaqt oralig'i (10 daqiqa = 600,000 millisoniya)
 const INTERVAL_MS = 10 * 60 * 1000; 
+
+// Grammatika mavzulari (Bir xil savol tushmasligi uchun)
+const TOPICS = [
+  "Present Simple vs Present Continuous",
+  "Past Simple vs Past Continuous",
+  "Present Perfect vs Past Simple",
+  "Future Tenses (will, going to, present continuous)",
+  "Conditionals (Zero, First, Second, Third)",
+  "Passive Voice",
+  "Reported Speech",
+  "Modal Verbs (can, could, should, must, might)",
+  "Gerunds and Infinitives",
+  "Prepositions of Time and Place",
+  "Phrasal Verbs",
+  "Relative Clauses (who, which, that)",
+  "Articles (a, an, the, zero article)",
+  "Quantifiers (some, any, much, many, a few)",
+  "Question Tags",
+  "Adjectives and Adverbs (Comparatives, Superlatives)",
+  "Causative Form (have/get something done)"
+];
 // =========================================
 
 const bot = new TelegramBot(TELEGRAM_TOKEN, { polling: false });
 
-/**
- * Groq AI (Llama 3) orqali test savolini yaratish funksiyasi
- */
 async function generateQuizFromAI() {
+  // Tasodifiy mavzuni tanlash
+  const randomTopic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
+  
   const systemPrompt = `You are an expert English grammar teacher. Generate a single, challenging English grammar multiple-choice question.
+IMPORTANT: The grammar topic for this specific question MUST BE EXACTLY about: "${randomTopic}". Ensure the question is highly unique and not repeated.
 DO NOT include any text like "IELTS" or "points". Do not wrap the response in markdown blocks like \`\`\`json. 
 STRICT LENGTH LIMITS:
   - The "question" must be under 200 characters.
@@ -46,7 +61,7 @@ Make sure 'correct_option_id' is an integer between 0 and 3 matching the correct
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
         messages: [{ role: 'system', content: systemPrompt }],
-        temperature: 0.7,
+        temperature: 0.9, // Kreativlikni oshirdik
         response_format: { type: "json_object" }
       })
     });
@@ -66,11 +81,8 @@ Make sure 'correct_option_id' is an integer between 0 and 3 matching the correct
   }
 }
 
-/**
- * Tayyor testni Telegram kanalga yuborish funksiyasi
- */
 async function sendQuizToChannel() {
-  console.log(`[${new Date().toLocaleTimeString()}] Yangi test yaratilmoqda... (Groq - Llama 3)`);
+  console.log(`[${new Date().toLocaleTimeString()}] Yangi test yaratilmoqda...`);
   
   const quizData = await generateQuizFromAI();
 
@@ -99,12 +111,8 @@ async function sendQuizToChannel() {
 }
 
 // ================= ASOSIY JARAYON =================
-console.log('Bot ishga tushdi. Har 10 daqiqada test yuboriladi...');
-
-// Dasturni ishga tushirgan zahoti birinchi testni yuborib ko'rish:
+console.log('Bot ishga tushdi. Har 10 daqiqada tasodifiy mavzuda test yuboriladi...');
 sendQuizToChannel();
-
-// Har 10 daqiqada takrorlash
 setInterval(sendQuizToChannel, INTERVAL_MS);
 
 // ========= HOSTING UCHUN HTTP SERVER (PORT BINDING) =========
