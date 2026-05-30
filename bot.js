@@ -6,7 +6,6 @@ const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 const CHANNEL_ID = process.env.CHANNEL_ID || '@EnglishGrammarChannell';
 const INTERVAL_MS = 10 * 60 * 1000; 
 
-// Grammatika mavzulari (Bir xil savol tushmasligi uchun)
 const TOPICS = [
   "Present Simple vs Present Continuous",
   "Past Simple vs Past Continuous",
@@ -31,12 +30,12 @@ const TOPICS = [
 const bot = new TelegramBot(TELEGRAM_TOKEN, { polling: false });
 
 async function generateQuizFromAI() {
-  // Tasodifiy mavzuni tanlash
   const randomTopic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
   
   const systemPrompt = `You are an expert English grammar teacher. Generate a single, challenging English grammar multiple-choice question.
 IMPORTANT: The grammar topic for this specific question MUST BE EXACTLY about: "${randomTopic}". Ensure the question is highly unique and not repeated.
-DO NOT include any text like "IELTS" or "points". Do not wrap the response in markdown blocks like \`\`\`json. 
+DO NOT include any text like "IELTS" or "points". 
+CRITICAL INSTRUCTION FOR OPTIONS: DO NOT prefix options with letters or numbers like A), B), 1., 2.. Just provide the exact word or phrase!
 STRICT LENGTH LIMITS:
   - The "question" must be under 200 characters.
   - Each "option" must be under 50 characters.
@@ -48,8 +47,7 @@ Return ONLY a raw JSON object with this exact structure:
   "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
   "correct_option_id": 1, 
   "explanation": "A short, clear explanation IN UZBEK of why the correct answer is right and the others are wrong."
-}
-Make sure 'correct_option_id' is an integer between 0 and 3 matching the correct option in the options array. Ensure all options are unique.`;
+}`;
 
   try {
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -61,20 +59,16 @@ Make sure 'correct_option_id' is an integer between 0 and 3 matching the correct
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
         messages: [{ role: 'system', content: systemPrompt }],
-        temperature: 0.9, // Kreativlikni oshirdik
+        temperature: 0.9,
         response_format: { type: "json_object" }
       })
     });
 
     const data = await response.json();
-    
-    if (data.error) {
-      throw new Error(data.error.message);
-    }
+    if (data.error) throw new Error(data.error.message);
 
     let aiText = data.choices[0].message.content.trim();
     return JSON.parse(aiText);
-
   } catch (error) {
     console.error('Groq API xatosi:', error.message);
     return null;
@@ -87,9 +81,22 @@ async function sendQuizToChannel() {
   const quizData = await generateQuizFromAI();
 
   if (!quizData) {
-    console.log('Test yaratishda xatolik bo\'ldi. Keyingi siklni kutamiz.');
+    console.log('Test yaratishda xatolik bo\'ldi.');
     return;
   }
+
+  // --- JAVOBLARNI TASODIFIY ARALASHTIRISH (SHUFFLE) ---
+  let options = quizData.options;
+  let correctText = options[quizData.correct_option_id];
+
+  for (let i = options.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [options[i], options[j]] = [options[j], options[i]];
+  }
+
+  quizData.correct_option_id = options.indexOf(correctText);
+  quizData.options = options;
+  // ----------------------------------------------------
 
   try {
     const pollResponse = await bot.sendPoll(
@@ -103,8 +110,7 @@ async function sendQuizToChannel() {
         is_anonymous: true
       }
     );
-
-    console.log(`[${new Date().toLocaleTimeString()}] Test muvaffaqiyatli kanalga yuborildi! Xabar ID: ${pollResponse.message_id}`);
+    console.log(`[${new Date().toLocaleTimeString()}] Test muvaffaqiyatli kanalga yuborildi!`);
   } catch (error) {
     console.error('Telegramga yuborishda xatolik:', error.message);
   }
@@ -118,12 +124,10 @@ setInterval(sendQuizToChannel, INTERVAL_MS);
 // ========= HOSTING UCHUN HTTP SERVER (PORT BINDING) =========
 const http = require('http');
 const PORT = process.env.PORT || 3000;
-
 const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
   res.end('Bot muvaffaqiyatli ishlamoqda! 🚀');
 });
-
 server.listen(PORT, () => {
-  console.log(`Web server ${PORT}-portda ishga tushdi va pings qabul qilishga tayyor.`);
+  console.log(`Web server ${PORT}-portda ishga tushdi.`);
 });
